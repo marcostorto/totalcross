@@ -9,6 +9,9 @@
 #include "errno.h"
 #include <signal.h>
 #endif
+#ifdef __OpenBSD__
+#include <sys/wait.h>
+#endif
 
 TC_API void jlPI_waitFor(NMParams p) {
 #if defined(linux) && !defined(darwin)

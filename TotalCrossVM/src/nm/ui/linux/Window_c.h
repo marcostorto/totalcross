@@ -2,7 +2,7 @@
 // Copyright (C) 2014-2020 TotalCross Global Mobile Platform Ltda.
 //
 // SPDX-License-Identifier: LGPL-2.1-only
-#if __APPLE__
+#if defined __APPLE__ || defined __OpenBSD__
 #include "SDL.h"
 #else
 #include "SDL2/SDL.h"

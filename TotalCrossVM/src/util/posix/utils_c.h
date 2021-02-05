@@ -81,7 +81,11 @@ extern struct mallinfo mallinfo(void);
 #if defined(FORCE_LIBC_ALLOC) || defined(ENABLE_WIN32_POINTER_VERIFICATION)
 int32 getUsedMemory()
 {
+#ifndef __OpenBSD__
    return mallinfo().uordblks;
+#else
+   return 0;
+#endif
 }
 #endif
 

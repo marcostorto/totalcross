@@ -5,7 +5,7 @@
 
 
 
-#ifndef __APPLE__
+#if !defined __APPLE__ && !defined __OpenBSD__
 #include <features.h>
 #endif
 #include <stdio.h>   /* Standard input/output definitions */

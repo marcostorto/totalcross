@@ -19,7 +19,7 @@
 #define SQLITE_OS_WINRT 1
 #endif
 
-#if defined TOTALCROSS && defined POSIX && !defined __APPLE__ && !defined ANDROID
+#if defined TOTALCROSS && defined POSIX && !defined __APPLE__ && !defined ANDROID && !defined __OpenBSD__
 #include <linux/mman.h>
 #endif
 

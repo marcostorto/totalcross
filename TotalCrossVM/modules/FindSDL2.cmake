@@ -75,6 +75,7 @@ SET(SDL2_SEARCH_PATHS
 	/opt/csw # Blastwave
 	/opt
 	/usr/lib
+	/usr/X11R6 #OpenBSD
 )
 
 FIND_PATH(SDL2_INCLUDE_DIR SDL.h
