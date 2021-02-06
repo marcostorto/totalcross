@@ -35,6 +35,9 @@ static bool privateDebug(char* str)
    static char debugPath[MAX_PATHNAME];
    if (!fdebug)
    {
+      // fix: appPath cannot be empty, otherwise debugPath will be /DebugConsole.txt
+      if (strlen(appPath) == 0) 
+         strcpy(appPath, ".");
       xstrprintf(debugPath, "%s/DebugConsole.txt", appPath);
       fdebug = fopen(debugPath, "ab+"); //flsobral@tc110: replaced mode "wb" with "ab+".
    }
@@ -48,8 +51,7 @@ static bool privateDebug(char* str)
       else
       {
          fputs(str,fdebug);   
-         printf(str);
-         printf("\n");
+         printf("%s\n", str); // fix: Vm.debug don't print on OpenBSD
          err = (fputs("\n",fdebug) >= 0);
          fflush(fdebug);
          fsync(fileno(fdebug));
