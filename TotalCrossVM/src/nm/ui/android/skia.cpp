@@ -5,6 +5,11 @@
 
 #include "skia.h"
 
+#define USE_COMPUTE_OPAQUE 1
+#define USE_WRITE_PIXELS 1
+#define USE_COLORTYPE_CONVERSION 1
+#define USE_NATIVE_SWAP 1
+
 #if __APPLE__
 #ifdef darwin
 #include <OpenGLES/ES2/gl.h>
@@ -68,7 +73,7 @@
 
 
 extern "C" {
-#if !defined APPLE && !defined ANDROID && defined linux && defined __arm__ && !defined __aarch64__
+#if !defined APPLE && !defined ANDROID && !defined darwin && defined linux && defined __arm__ && !defined __aarch64__
 // Avoid dependency on glibc 2.27
 // These functions are used by Skia .a file, so we have to define a wrapper.
 // https://stackoverflow.com/questions/8823267/linking-against-older-symbol-version-in-a-so-file
@@ -119,6 +124,8 @@ SkPaint forePaint; // used for contours
 SkPaint backPaint; // used for fills
 SkPaint alphaPaint; // used for alphaMask
 SkBitmap bitmap;
+SkFont   skFont;
+
 #define TYPEFACE_LEN 32
 sk_sp<SkTypeface> typefaces[TYPEFACE_LEN];
 int typefaceIdx = 0;
@@ -165,6 +172,7 @@ void initSkia(int w, int h, void * pixels, int pitch, uint32_t pixelformat)
     surface = gpuSurface;
     canvas = gpuCanvas;
 #endif
+    skFont.setSize(16);
     // The forepaint is used for "draw" methods
     forePaint.setStyle(SkPaint::kStroke_Style);
     forePaint.setAntiAlias(true);
@@ -226,29 +234,80 @@ sk_sp<SkTypeface> skia_getTypeface(int32 typefaceIndex) {
 
 int32 skia_stringWidth(const void *text, int32 charCount, int32 typefaceIndex, int32 fontSize)
 {
-    return SkFont(skia_getTypeface(typefaceIndex),fontSize).measureText(text,charCount,SkTextEncoding::kUTF16);
+    const auto newTypeFace = skia_getTypeface(typefaceIndex);
+
+    if(skFont.getTypeface() != newTypeFace.get()) {
+        skFont.setTypeface(newTypeFace);
+    }
+    if(skFont.getSize() != fontSize) {
+        skFont.setSize(fontSize);
+    }
+    return skFont.measureText(text,charCount,SkTextEncoding::kUTF16);
 }
 
 static void releaseProc(void* addr, void* ) {
     // printf("releaseProc called\n");
-    delete[] (uint32_t*) addr;
+    operator delete (addr);
 }
+
+#if USE_NATIVE_SWAP
+inline uint32_t builtinSwap32(uint32_t val) noexcept {
+        #if defined(__clang__)
+            return  __builtin_bswap32(val);
+        #elif defined(__GNUG__)
+            return  __builtin_bswap32(val);
+        #elif defined(_MSC_VER)
+             return = _byteswap_ulong(val);
+        #endif
+}
+#endif
 
 int skia_makeBitmap(int32 id, void *data, int32 w, int32 h) {
     SKIA_TRACE()
-
-    //TODO: reuse pixel data and avoid all this allocation, maybe using data directly with the correct color type
-    int32 *converted = new int32[w * h];
-    for (int i = 0; i < w * h; i++) {
-        int32 pixel = ((Pixel*)data)[i];
-        converted[i] = (((pixel >> 24) & 0xFF)) | ((((pixel >> 16) & 0xFF) << 8) | (((pixel >> 8) & 0xFF) << 16) | ((pixel & 0xFF) << 24));
-    }
+    
+    #if USE_NATIVE_SWAP
+        const auto count = w * h;
+        int32* const converted = new int32[count];
+        const auto d32 = reinterpret_cast<const Pixel*>(data);
+        for (int i = 0; i < count; i++) {
+            converted[i] = builtinSwap32(d32[i]);
+        }
+    #else
+        //TODO: reuse pixel data and avoid all this allocation, maybe using data directly with the correct color type
+        int32 *converted = new int32[w * h];
+        for (int i = 0; i < w * h; i++) {
+            int32 pixel = ((Pixel*)data)[i];
+            converted[i] = (((pixel >> 24) & 0xFF)) | ((((pixel >> 16) & 0xFF) << 8) | (((pixel >> 8) & 0xFF) << 16) | ((pixel & 0xFF) << 24));
+        }
+    #endif
 
     if (id < 0) { // must create a new bitmap
         SkBitmap bitmap;
-        bitmap.installPixels(SkImageInfo::Make(w, h, kN32_SkColorType, kUnpremul_SkAlphaType), (void*)converted, sizeof(Pixel) * w, releaseProc, nullptr);
+		bitmap.installPixels(SkImageInfo::Make(w, h, kN32_SkColorType, kUnpremul_SkAlphaType),
+							 (void*)converted, sizeof(Pixel) * w, releaseProc, nullptr);
+
+#if USE_COMPUTE_OPAQUE
+		if (SkBitmap::ComputeIsOpaque(bitmap)) {
+			bitmap.setAlphaType(kOpaque_SkAlphaType);
+		}
+#endif
+
+#if USE_COLORTYPE_CONVERSION
+        if (bitmap.isOpaque()) {
+            void* dstPixels = operator new(w * h * canvas->imageInfo().bytesPerPixel());
+            SkImageInfo dstImageInfo = 
+                SkImageInfo::Make(
+                    w, 
+                    h, 
+                    canvas->imageInfo().colorType(), 
+                    canvas->imageInfo().alphaType()
+                );
+            bitmap.readPixels(dstImageInfo, dstPixels, dstImageInfo.minRowBytes(), 0, 0);
+            bitmap.installPixels(dstImageInfo, dstPixels, dstImageInfo.minRowBytes(), releaseProc, nullptr);
+        }
+#endif
         id = textures.size();
-        textures.push_back(bitmap);
+        textures.emplace_back(std::move(bitmap));
     } else {
         SkBitmap& bitmap = textures[id];
         bitmap.installPixels(SkImageInfo::Make(w, h, kN32_SkColorType, kUnpremul_SkAlphaType), (void*)converted, sizeof(Pixel) * w, releaseProc, nullptr);
@@ -280,9 +339,38 @@ void skia_drawSurface(int32 skiaSurface, int32 id, int32 srcX, int32 srcY, int32
 {
     SKIA_TRACE()
 
-    alphaPaint.setAlpha(alphaMask);
-    canvas->drawBitmapRect(textures[id], SkRect::MakeXYWH(srcX, srcY, w, h),
-                           SkRect::MakeXYWH(dstX, dstY, w, h), &alphaPaint);
+	const auto& texture {textures[id]};
+
+#if USE_WRITE_PIXELS
+    /*
+        Fast drawing, can only be used to draw fully opaque images
+        without sampling (src and dst dimensions are the same).
+        Makes drawing JPEG and opaque PNGs over 10x faster.
+
+        TODO:
+            - add actual numbers to back this statement
+    */
+if (texture.isOpaque() && alphaMask == 255) {
+    canvas->writePixels(
+        texture.info(),
+        texture.getPixels(),
+        texture.rowBytes(),
+        dstX,
+        dstY
+    );
+} else
+#endif
+    {
+        alphaPaint.setAlpha(alphaMask);
+        canvas->drawBitmapRect(
+            texture,
+            //texture.bounds(),
+            SkRect::MakeXYWH(srcX, srcY, w, h),
+            SkRect::MakeXYWH(dstX, dstY, w, h),
+            &alphaPaint,
+            SkCanvas::kFast_SrcRectConstraint
+        );
+    }
 }
 
 // The getPixel call demands a 1-pixel readback from the GPU. Avoid it if possible.
@@ -346,11 +434,18 @@ void skia_fillRect(int32 skiaSurface, int32 x, int32 y, int32 w, int32 h, Pixel 
 void skia_drawText(int32 skiaSurface, const void *text, int32 chrCount, int32 x0, int32 y0, Pixel foreColor, int32 justifyWidth, int32 fontSize, int32 typefaceIndex)
 {
     SKIA_TRACE()
+    const auto newTypeFace = skia_getTypeface(typefaceIndex);
 
-    const auto txtFont {SkFont(skia_getTypeface(typefaceIndex),fontSize)};
-    const auto txtBlob {SkTextBlob::MakeFromText(text,chrCount,txtFont,SkTextEncoding::kUTF16)};
-    backPaint.setColor(foreColor);
-    canvas->drawTextBlob(txtBlob,x0,y0,backPaint);
+    if(skFont.getTypeface() != newTypeFace.get()) {
+        skFont.setTypeface(newTypeFace);
+    }
+    if(skFont.getSize() != fontSize) {
+        skFont.setSize(fontSize);
+    }
+    if(backPaint.getColor() != foreColor){
+        backPaint.setColor(foreColor);
+    }
+    canvas->drawTextBlob(SkTextBlob::MakeFromText(text,chrCount,skFont,SkTextEncoding::kUTF16),x0,y0,backPaint);
 }
 
 void skia_ellipseDrawAndFill(int32 skiaSurface, int32 xc, int32 yc, int32 rx, int32 ry, Pixel pc1, Pixel pc2, bool fill, bool gradient)
