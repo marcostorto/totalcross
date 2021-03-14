@@ -41,34 +41,12 @@ android {
         versionName "!1.0!"
         multiDexEnabled true
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
-        externalNativeBuild {
-            cmake {
-                abiFilters 'armeabi-v7a', 'arm64-v8a'
-                arguments "-DANDROID_TOOLCHAIN=clang", "-DANDROID_LIBS_DIR="+sourceSets.getByName("main").jniLibs.srcDirs[0]
-                cppFlags "-std=c++14", "-DSK_GL"
-                targets "tcvm"
-            }
-        }
-    }
-
-    packagingOptions {
-        pickFirst "**/libskia.so"
-    }
-    
-    signingConfigs {
-        config {
-            keyAlias 'tcandroidkey'
-            keyPassword "$System.env.TC_KEY_PASSWORD"
-            storeFile file("$System.env.TC_PATH_TO_KEY_STORE")
-            storePassword "$System.env.TC_STORE_PASSWORD"
-        }
     }
 
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.config\
         }
         debug {}
     }
@@ -81,11 +59,6 @@ android {
         }
     }
     
-    externalNativeBuild {
-        cmake {
-            path "../../CMakeLists.txt"
-        }
-    }
     task assembleAssets(type:Zip) {
         // outputs.upToDateWhen { false }
         from ('../../../TotalCrossSDK/dist/vm') {
@@ -103,66 +76,52 @@ android {
         destinationDir file('src/standard/assets') // directory that you want your archive to be placed in
     }
 
-    task copyApk {
-        doLast {
-            copy {
-                from fileTree('build/outputs/apk').files
-                into "../../../TotalCrossSDK/dist/vm/android"
-                include "**/app-standard-${buildType}.apk"
-                rename { String fileName ->
-                    fileName.replace("app-standard-${buildType}", 'TotalCross')
-                }
-                eachFile { println it.file }
-            }
-            copy {
-                from zipTree("build/outputs/apk/singleApk/${buildType}/app-singleApk-${buildType}.apk").files
-                into "../../../TotalCrossSDK/etc/tools/android"
-                include 'AndroidManifest.xml', 'resources.arsc'
-                rename { String fileName ->
-                    fileName.replace('.', '_singleapk.')
-                }
-                eachFile { println it.file }
-            }
-            copy {
-                from zipTree("build/outputs/apk/includeSms/${buildType}/app-includeSms-${buildType}.apk").files
-                into "../../../TotalCrossSDK/etc/tools/android"
-                include 'AndroidManifest.xml', 'resources.arsc'
-                rename { String fileName ->
-                    fileName.replace('.', '_includeSms.')
-                }
-                eachFile { println it.file }
-            }
-            copy {
-                from fileTree('build/intermediates/res/merged/standard/' + buildType).files
-                into '../../../TotalCrossSDK/etc/launchers/android'
-                include 'resources-standard' + buildType.capitalize() + '.ap_'
-                rename { String fileName ->
-                    fileName.replace('-standard' + buildType.capitalize(), '')
-                }
-                eachFile { println it.file }
-            }
-            copy {
-                from fileTree('build/intermediates/processed_res/standard'+ buildType.capitalize() +'/out').files
-                into '../../../TotalCrossSDK/etc/launchers/android'
-                include 'resources-standard' + buildType.capitalize() + '.ap_'
-                rename { String fileName ->
-                    fileName.replace('-standard' + buildType.capitalize(), '')
-                }
-                eachFile { println it.file }
-            }
-        }
-    }
-
 	assemble.mustRunAfter assembleAssets
-	assemble.finalizedBy copyApk
     project.afterEvaluate{
 	    applicationVariants.all { com.android.build.gradle.api.ApplicationVariant variant ->
 		    	variant.assemble.dependsOn(['assembleAssets'])
 		}
+        android.applicationVariants.all { variant ->
+            variant.assemble.doLast {
+                if (variant.flavorName == 'standard') {
+                    variant.outputs.each { output ->
+                        def outputFile = output.outputFile
+                        if (outputFile != null && outputFile.name.endsWith('.apk')) {
+                            copy {
+                                from outputFile
+                                into "../../../TotalCrossSDK/dist/vm/android"
+                                rename { 'TotalCross.apk' }
+                            }
+                        }
+                    }
+                    copy {
+                        from fileTree('build/intermediates/processed_res/' + variant.name +'/out').files
+                        into '../../../TotalCrossSDK/etc/launchers/android'
+                        include 'resources-' + variant.name + '.ap_'
+                        rename { 'resources.ap_' }
+                    }
+                } else {
+                    variant.outputs.each { output ->
+                        def outputFile = output.outputFile
+                        if (outputFile != null && outputFile.name.endsWith('.apk')) {
+                            copy {
+                                from zipTree(outputFile).files
+                                into "../../../TotalCrossSDK/etc/tools/android"
+                                include 'AndroidManifest.xml', 'resources.arsc'
+                                rename { String fileName ->
+                                    fileName.replace('.', '_' + variant.flavorName + '.')
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
 	}
 }
 
 dependencies {
+    implementation project(":tcvm")
     implementation fileTree(dir: 'libs', include: ['*.jar'])
 
     implementation 'com.android.support:appcompat-v7:26.0.2'
@@ -200,12 +159,6 @@ dependencies {
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
     
     implementation 'com.android.support:customtabs:25.1.0'
-    
-    // https://mvnrepository.com/artifact/cielo.printer.client/printer-manager
-	//compile group: 'cielo.printer.client', name: 'printer-manager', version: '2.3.1'
-	
-	// https://mvnrepository.com/artifact/com.cielo.lio/order-manager
-    compile group: 'com.cielo.lio', name: 'order-manager', version: '0.19.8'
 
     //Youtube API
     implementation files('libs/YouTubeAndroidPlayerApi.jar')

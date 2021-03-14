@@ -71,7 +71,7 @@ public class VirtualKeyboard extends Window {
   private int animDir = BOTTOM;
   protected int totalTime = 400;
   private ControlAnimation currentAnimation;
-  private boolean fadeOnPopAndUnpop = true;
+  private boolean fadeOnPopAndUnpop = false;
 
   public static void orientationChanged(boolean changed) {
     changeOrientation = changed;
@@ -247,23 +247,11 @@ public class VirtualKeyboard extends Window {
   
   @Override
   protected void onPopup() {
-    btnCancelPressed = false;
-    setFocus(valueEdit);
-    int end = valueEdit.getLength();
-    valueEdit.setCursorPos(end, end);
-    previousValue = valueEdit.getText();
-
-    if (previousValue != null && previousValue.equals("")) {
-      clrIcon.setVisible(false);
-    } else {
-      clrIcon.setVisible(true);
-    }
-    
     if (currentAnimation != null) {
       return;
     }
 
-    currentAnimation = PathAnimation.create(this, BOTTOM, null, totalTime);
+    currentAnimation = PathAnimation.create(this, animDir, null, totalTime);
     if (fadeOnPopAndUnpop) {
       currentAnimation.with(FadeAnimation.create(this, true, null, totalTime));
     }
@@ -271,6 +259,17 @@ public class VirtualKeyboard extends Window {
       @Override
       public void onAnimationFinished(ControlAnimation anim) {
         currentAnimation = null;
+        btnCancelPressed = false;
+        setFocus(valueEdit);
+        int end = valueEdit.getLength();
+        valueEdit.setCursorPos(end, end);
+        previousValue = valueEdit.getText();
+    
+        if (previousValue != null && previousValue.equals("")) {
+          clrIcon.setVisible(false);
+        } else {
+          clrIcon.setVisible(true);
+        }
       }
     });
     currentAnimation.start();
@@ -295,7 +294,6 @@ public class VirtualKeyboard extends Window {
   
   @Override
   public void popup() {
-    setRect(false);
     super.popup();
   }
 
@@ -306,29 +304,23 @@ public class VirtualKeyboard extends Window {
 
   @Override
   public void postUnpop() {
-    Window.getTopMost().repaintNow();
     isOpen = false;
   }
 
   @Override
-  public void unpop() {
+  protected void onUnpop() {
     if (currentAnimation != null) {
       return;
     }
 
-    if (animDir == CENTER) {
-      currentAnimation = FadeAnimation.create(this, false, null, totalTime);
-    } else {
-      currentAnimation = PathAnimation.create(this, -animDir, null, totalTime);
-      if (fadeOnPopAndUnpop) {
-        currentAnimation.with(FadeAnimation.create(this, false, null, totalTime));
-      }
+    currentAnimation = PathAnimation.create(this, -animDir, null, totalTime);
+    if (fadeOnPopAndUnpop) {
+      currentAnimation.with(FadeAnimation.create(this, true, null, totalTime));
     }
     currentAnimation.setAnimationFinishedAction(new AnimationFinished() {
       @Override
       public void onAnimationFinished(ControlAnimation anim) {
         currentAnimation = null;
-        VirtualKeyboard.super.unpop();
       }
     });
     currentAnimation.start();

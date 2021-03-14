@@ -97,11 +97,11 @@ public class Edit extends Control implements TextControl, HasValue<String> {
 		@Override
 		public void updateListenerTriggered(int elapsedMilliseconds) {
 			blinkTime  += elapsedMilliseconds;
-			if(blinkTime > 350) {
+			if(blinkTime > 500) {
 				if (!isTopMost()) {
 			          focusOut();
 			        } else if (parent != null) {
-			          Window.needsPaint = true;
+			          Edit.this.repaintNow();
 			          // guich@tc130: show the copy/paste menu
 			          /*                  if (editable && enabled && lastPenDown != -1 && clipboardDelay != -1 && (Vm.getTimeStamp() - lastPenDown) >= clipboardDelay)
 			                   if (showClipboardMenu())
@@ -110,7 +110,7 @@ public class Edit extends Control implements TextControl, HasValue<String> {
 			                      break;
 			                   }
 			           */ }
-				cursorShowing = !cursorShowing;
+				cursorShowing = !hasFocus ? false : !cursorShowing;
 				blinkTime = 0;
 			}
 		}
@@ -1499,10 +1499,12 @@ protected int gap;
       }
       return;
     case ControlEvent.FOCUS_IN:
+      if (!hasFocus) {
+        MainWindow.getMainWindow().addUpdateListener(blinkListener);
+      }
       isHighlighting = false; // guich@573_28: after closing a KCC, don't let the focus move from here.
       wasFocusIn = true; // jairocg@450_31: set it so we can validate later
       hasFocus = true;
-      MainWindow.getMainWindow().addUpdateListener(blinkListener);
       if (len > 0) // guich@550_20: autoselect the text
       {
         if (autoSelect && !ignoreSelect) // guich@570_112: changed to !ignoreSelect

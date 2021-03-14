@@ -1,7 +1,62 @@
-# TotalCross Change Log
+# TotalCross Changelog
+
 All notable changes to this project will be documented in this file.
 
-## 7.0.0 - January 2021
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [7.0.3] - 2021-03-09
+
+- **Performance boost and reduced binary size on Linux and Android** - This was actually our mistake, those targets were being built for debugging since we started using CMake. This release should have performance at least twice as better as the previous releases built with CMake.
+
+- **Build system improvements**
+  - SQLite3 source code removed from our repository, downloading and patching is performed by CMake.
+  - Android build improved, it should be A LOT faster for most systems.
+
+- **Edit and virtual keyboard performance improvements**
+
+### Changed
+- Removed Cielo Lio text printing support, reducing the Android binary size. (Let us know if you need this feature back)
+
+### Fixed
+- Android:
+  - Fixed launching third party apps using Vm.exec
+  - Fixed permission for writing on storage for android-29
+> Starting from target-sdk 29 application should use scoped storage
+https://developer.android.com/training/data-storage#scoped-storage
+- API:
+  - MessageBox: fixed NPE during unpop when the MessageBox is created without buttons (i.e. button captions is null) - #304
+
+## [7.0.2] - 2021-02-09
+
+### Added
+- String: added missing constructors that handle charset encoding.
+
+### Fixed
+- XmlReader and SOAP: Fixed bugs introduced on version 7.0.0.
+- Image: Fixed bug introduced on version 7.0.0 that caused animated images to draw only its first frame - #296 
+
+## [7.0.1] - 2021-01-28
+
+### Added
+- Added a few tweaks to improve drawing performance:
+  - Improved color type conversion performance by using compiler specific byte swap functions.
+  - :rocket: **Greatly** improved image drawing performance by performing color type conversion only once, instead of letting Skia handle it automatically on every draw operation.
+  - :rocket: **Greatly** improved drawing performance for fully opaque images, by skipping alpha channel conversion on draw. Drawing JPEGs and opaque PNGs got over 10 times faster on some tested devices.
+  - Improved text drawing performance by caching font objects and avoiding unnecessary font loading.
+  
+### Changed
+- Force usage of software graphics on Linux/ARM systems until we find a proper way to detect support for hardware accelerated graphics - #259
+
+### Fixed
+- Class java.util.Objects would sometimes be not available on the device.
+- Segfault during SDL initialization reported in some systems - #263, #265
+- Fixed screen not updating on some devices, by refreshing the SDL_Surface on repaint.
+- XmlTokenizer was still trying to use the old byte implementation when running on device.
+
+## [7.0.0] - 2021-01-18
 
 Welcome to 2021, and our first **stable release**! Let's get straight to the objectives:
 
@@ -9,62 +64,19 @@ Welcome to 2021, and our first **stable release**! Let's get straight to the obj
 - **arm64 distribution** - Now deploy TotalCross applications for linux arm64 is much easier;
 - **Skia update** - A new room for improvements.
 
-Join our [community on the telegram](https://t.me/totalcrosscommunity) to give feedback about this release!
+### Added
+- Linux ARM64 support: packaging with the flag `-linux_arm` will **also** result in arm64 artifacts.
+- Improvements for the TotalCross Simulator, including full screen and better resolution support - #185, #198
 
-### Huge bug fixes
+### Changed
+- Skia: updated Skia dependency from branch m71 to m87 - #196
 
-Our main goal with this version is to keep it as stable as possible. We need a solid foundation for the future of the tool. With that we focus on correcting new and old problems that accompanied us in version 6. The main bugs resolved and that are very important for totalcross stackholders are:
-
-- `VirtualKeyboard` issues: this component widely used for embedded devices has some bugs that hinder the execution of applications; 
-- Android black screen: now everything works correctly when running the .apk for the first time;
-- Build issues: we updated the versions of Android API, Android NDK and Gradle. Fixed bugs related to the build for legacy systems (GLIBC issue). Changes were made to implement CICD with Github Actions.
-
-You can see the full list of issues resolved at the end of the note.
-
-### arm64 distribution
-
-As a cross-platform tool we need to pay attention in market changes and one of those that has caught our attention is the adoption of arm64 devices. To meet this demand we are launching a new feature:
-
-> Any package made with the `-linux_arm` flag will **also** result in arm64 artifacts.
-
-As always just transfer the files to your device! You can customize the build for your distro for now the `TotalCross/totaldocker` repository can help :sweat_smile:
-
-### Skia update
-
-Our Skia branch was starting to get outdated, so we upgraded to branch `m87` in some platforms. They are: `linux` (x86_64) and `linux_arm` (32v7). This opened the door to a new room of enhancement that we will work along the 7.x.x lifecycle. Some bugs have already been detected and should appear as minors or patches. In the next versions we will have the new Skia on more platforms.
-
-### Fixes
-
-We closed the following issues:
-
-- #124
-- #140
-- #185
-- #176
-- #180
-- #184
-- #181
-- #193
-- #198
-- #123
-- #179
-- #165
-- #92
-- #190
-- #234
-- #238
-- #236
-- #248
-- #177
-- #235
-- #231
-- #217
-- #189
-- #196
-- #178
-
-You can see all of these issues in the repository https://github.com/TotalCross/totalcross/issues.
-
+### Fixed
+- `VirtualKeyboard` issues: this component widely used for embedded devices has some bugs that hinder the execution of applications - #124, #184, #193
+- Android black screen: now everything works correctly when running the .apk for the first time or rotating the screen - #92, #179
+- Build issues: we updated the versions of Android API, Android NDK and Gradle. Fixed bugs related to the build for legacy systems (GLIBC issue). Changes were made to implement CICD with Github Actions - #165
+- XML encoder not working correctly with special characters - #190
+- Misc bugs with graphical controls - #123, #140, #176, #180, #181, #177, #217, #189, #178
 
 ## 6.1.1 - October 2020
 Hello! This minor release has as main objective:
@@ -1133,3 +1145,9 @@ the ScrollContainer reseta it to true
 
 ### Known issues
 - `Class.getCanonicalName()` doesn't return the canonical name, but defaults to `Class.getName()`
+
+[Unreleased]: https://github.com/totalcross/TotalCross/compare/v7.0.2...master
+[7.0.0]: https://github.com/totalcross/TotalCross/compare/v6.1.1...v7.0.0
+[7.0.1]: https://github.com/totalcross/TotalCross/compare/v7.0.0...v7.0.1
+[7.0.2]: https://github.com/totalcross/TotalCross/compare/v7.0.1...v7.0.2
+[7.0.3]: https://github.com/totalcross/TotalCross/compare/v7.0.3...v7.0.3

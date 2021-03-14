@@ -25,7 +25,7 @@ jobs:
     - name: Build VM & Launcher
       run: |
         mkdir -p build
-        docker run -v ${PWD}/build:/build -v ${PWD}:/sources -t totalcross/${{ matrix.project }}:v1.0.0 bash -c "cmake /sources/TotalCrossVM -G Ninja && ninja"
+        docker run -v ${PWD}/build:/build -v ${PWD}:/sources -t totalcross/${{ matrix.project }}:v1.0.0 bash -c "cmake /sources/TotalCrossVM -DCMAKE_BUILD_TYPE=Release -G Ninja && ninja"
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v2
@@ -39,7 +39,7 @@ jobs:
     needs: build_linux
     runs-on: ubuntu-18.04
     container:
-      image: docker://fabernovel/android:api-28-gcloud-ndk-v1.2.0
+      image: docker://fabernovel/android:api-29-ndk-v1.2.0
 
     steps:
     - name: Checkout
@@ -114,7 +114,7 @@ jobs:
     - name: Build Android
       working-directory: TotalCrossVM/android
       run: |
-        ./gradlew assembleDebug copyApk -x test --stacktrace && ./gradlew assembleDebug copyApk -x test
+        ./gradlew assembleRelease -x test --stacktrace
  
     - name: Download Linux amd64
       continue-on-error: true

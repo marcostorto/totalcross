@@ -14,17 +14,18 @@ apply plugin: 'java'
 apply plugin: 'maven-publish'
 
 sourceCompatibility = 1.8
-version = '7.0.0'
+version = '7.0.3'
 group = 'com.totalcross'
 archivesBaseName = 'totalcross-sdk'
 
 // can't be used yet, enconding is a mess
 compileJava.options.encoding = 'UTF-8'
 
-javadoc {
-	failOnError = false
-	options.encoding = 'UTF-8'
-}
+
+//javadoc {
+//	failOnError = false
+//	options.encoding = 'UTF-8'
+//}
 
 configurations { 
 	obfuscatedArchive
@@ -303,5 +304,5 @@ task javadocJar(type: Jar) {
 javadoc.finalizedBy(javadocJar)
 
 artifacts {
-    archives sourcesJar, javadocJar, tcbaseJar, tcuiJar
+    archives tcbaseJar, tcuiJar
 }
