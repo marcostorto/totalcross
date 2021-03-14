@@ -233,7 +233,7 @@ EXP_FUNC int STDCALL getdomainname(char *buf, int buf_size);
 #include <sys/wait.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#ifndef __APPLE__
+#if !defined __APPLE__ && !defined __clang__
 #include <asm/byteorder.h>
 #endif
 

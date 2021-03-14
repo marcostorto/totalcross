@@ -106,7 +106,7 @@ typedef struct
 
 
 bool hasVirtualKeyboard();
-#if !defined __clang__ || defined darwin // some settings.h functions do not compile onder clang
+#if defined darwin || defined __clang__ // some settings.h functions do not compile onder clang
 bool initSettings(Context currentContext, CharP mainClassNameP, TCZFile loadedTCZ);
 bool retrieveSettings(Context currentContext, CharP mainClassName);
 void storeSettings(bool quittingApp);

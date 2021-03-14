@@ -18,7 +18,7 @@
  #include <ifaddrs.h>
  #include <stdio.h>
  #include <netdb.h>
-#if defined (darwin)
+#if defined (darwin) || defined __clang__
  #include <unistd.h>
 #endif
 #endif

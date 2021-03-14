@@ -467,7 +467,7 @@ extern size_t  _msize(void *);
 #endif
 
 #if !defined(USE_MEMCHECKER) && !defined(__APPLE__) && !defined(ANDROID)
-#ifndef __clang__
+#ifdef __clang__
 size_t dlmalloc_usable_size(void*); 
 #endif
 static uint32 getPtrSize(void *p)
@@ -478,8 +478,10 @@ static uint32 getPtrSize(void *p)
    #else
       return dlmalloc_usable_size(p);
    #endif
-#else
+#elif !defined __clang__
    return malloc_usable_size(p);
+#else
+   return dlmalloc_usable_size(p);
 #endif
 }
 #endif

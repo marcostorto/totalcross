@@ -6,5 +6,7 @@
 #ifndef Runtime_h
 #define Runtime_h
 #include "tcvm.h"
-
+#ifdef __clang__
+#include <unistd.h>
+#endif
 #endif

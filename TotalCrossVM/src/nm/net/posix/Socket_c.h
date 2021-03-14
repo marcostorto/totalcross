@@ -12,11 +12,11 @@
 #include <sys/socket.h>
 #include <sys/select.h>
 
-#if defined(ANDROID)
+#if defined(ANDROID) || defined __clang__
 #include <netinet/in.h>
 #endif
 
-#if defined (darwin)
+#if defined (darwin) || defined __clang__
 #include <sys/time.h>
 #include <arpa/inet.h>
 #include <err.h>

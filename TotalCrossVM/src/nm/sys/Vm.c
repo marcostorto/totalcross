@@ -397,10 +397,13 @@ TC_API void tsV_vibrate_i(NMParams p) // totalcross/sys/Vm native public static 
    vmVibrate(p->i32[0]);
 #endif   
 }
-//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////i
+
+TC_API void jlO_nativeHashCode(NMParams p);
+
 TC_API void tsV_identityHashCode_o(NMParams p) // totalcross/sys/Vm native public static int identityHashCode(Object object);
 {
-   jlO_nativeHashCode(p);
+	jlO_nativeHashCode(p);
 }
 //////////////////////////////////////////////////////////////////////////
 TC_API void tsV_preallocateArray_oi(NMParams p) // totalcross/sys/Vm native public static void preallocateArray(Object sample, int length);

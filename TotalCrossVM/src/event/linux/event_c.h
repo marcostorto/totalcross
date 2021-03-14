@@ -15,6 +15,7 @@
 #endif
 #include "../../init/tcsdl.h"
 #endif
+void screenChange(Context currentContext, int32 newWidth, int32 newHeight,        int32 hRes, int32 vRes, bool nothingChanged);
 
 bool privateIsEventAvailable()
 {
