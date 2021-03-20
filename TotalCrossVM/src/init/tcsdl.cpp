@@ -159,6 +159,7 @@ bool TCSDL_Init(ScreenSurface screen, const char* title, bool fullScreen) {
 		std::cerr << "SDL_GetWindowPixelFormat(): " << SDL_GetError() << '\n';
 		return false;
 	}
+	std::cout << "SDL_PIXEL_FORMAT: " << SDL_GetPixelFormatName(windowPixelFormat) << '\n';
 
 	usesTexture = std::string(rendererInfo.name).compare(std::string("software"));
 
@@ -234,6 +235,8 @@ void TCSDL_UpdateTexture(int w, int h, int pitch, void* pixels) {
 	if(usesTexture) {
 		// Update the given texture rectangle with new pixel data.
 		SDL_UpdateTexture(texture, NULL, pixels, pitch);
+	} else {
+		surface = SDL_GetWindowSurface(window);
 	}
 	// Call SDL render present
 	TCSDL_Present();

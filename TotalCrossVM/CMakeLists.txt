@@ -5,7 +5,7 @@
 cmake_minimum_required(VERSION 3.5)
 
 # set the project name
-project(TCVM VERSION 6.1.1)
+project(TCVM VERSION 7.0.2)
 
 if(NOT DEFINED BUILD_SHARED_LIBS AND NOT DEFINED TCVM_SHARED)
   if(CMAKE_GENERATOR STREQUAL Xcode)
@@ -20,6 +20,14 @@ endif()
 if (NOT DEFINED USE_SKIA)
   set(USE_SKIA ON)
 endif()
+
+if(TCVM_SHARED)
+  add_library(tcvm SHARED)
+else()
+  add_library(tcvm STATIC)
+endif()
+
+add_subdirectory(third_party) 
 
 # Find SDL2 and Skia
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/modules")
@@ -253,12 +261,9 @@ set(SOURCES
 
     ${TC_SRCDIR}/palmdb/palmdb.c
 
-    ${TC_SRCDIR}/sqlite/sqlite3.c
     ${TC_SRCDIR}/nm/db/NativeDB.c
 
     ${TC_SRCDIR}/scanner/ios/ios_barcode.c
-
-    ${TC_SRCDIR}/nm/cielo/printer/PrinterManager.c
 
     ${TC_SRCDIR}/nm/qrcode/qrcode_generation.c
 
@@ -427,7 +432,6 @@ include_directories(${TC_SRCDIR}/png)
 include_directories(${TC_SRCDIR}/ras)
 include_directories(${TC_SRCDIR}/scanner)
 include_directories(${TC_SRCDIR}/scanner/android)
-include_directories(${TC_SRCDIR}/sqlite)
 include_directories(${TC_SRCDIR}/sync)
 include_directories(${TC_SRCDIR}/tcvm)
 include_directories(${TC_SRCDIR}/util)
@@ -472,7 +476,7 @@ elseif(MSVC)
   add_definitions(-DFORCE_LIBC_ALLOC -DWIN32 -D_REENTRANT -DHAVE_MREMAP=0 -DLITTLE_ENDIAN)
 else()
   if(CMAKE_GENERATOR STREQUAL Xcode)
-    add_definitions(-Ddarwin)
+    add_definitions(-Ddarwin -DSK_GL)
     set(CMAKE_STATIC_LINKER_FLAGS ${CMAKE_STATIC_LINKER_FLAGS} "-lskia")
     set(CMAKE_XCODE_ATTRIBUTE_LIBRARY_SEARCH_PATHS ${SKIA_LIBRARY_DIRS})
     set(CMAKE_XCODE_ATTRIBUTE_LINK_BINARIES_WITH_LIBRARIES ${SKIA_LIBRARIES})
@@ -498,12 +502,7 @@ link_directories(${PROJECT_SOURCE_DIR})
 
 # add the library
 set(LIBRARY_ARGS ${SOURCES} ${TC_WCE_SOURCES} ${TC_MSVC_SOURCES} ${TC_NOT_MSVC_SOURCES} ${LB_SOURCES} ${TC_SKIA_SOURCES} ${TC_SDL_SOURCES} ${TC_ANDROID_SOURCES} ${TCVM_iOS_FILES})
-
-if(TCVM_SHARED)
-  add_library(tcvm SHARED ${LIBRARY_ARGS})
-else()
-  add_library(tcvm STATIC ${LIBRARY_ARGS})
-endif()
+target_sources(tcvm PUBLIC ${LIBRARY_ARGS})
 
 # Set C/CXX flags
 target_compile_options(tcvm
@@ -560,6 +559,8 @@ endif()
 if(DEFINED SDL2_LIBRARY)
   target_link_libraries(tcvm ${SDL2_LIBRARY})
 endif(DEFINED SDL2_LIBRARY)
+
+target_link_libraries(tcvm SQLite3)
 
 if(DEFINED ANDROID_ABI)
   add_library(libskia SHARED IMPORTED)
