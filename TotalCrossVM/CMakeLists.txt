@@ -292,7 +292,7 @@ if(NOT MSVC)
   )
 endif(NOT MSVC)
 
-if(DEFINED SKIA_LIBRARIES)
+if(DEFINED SKIA_LIBRARIES AND USE_SKIA)
   set(TC_SKIA_SOURCES
     ${TC_SRCDIR}/nm/ui/android/skia.cpp
   )
@@ -446,7 +446,7 @@ else()
   include_directories(${TC_SRCDIR}/nm/lang/posix)
 endif(MSVC)
 
-if(DEFINED SKIA_LIBRARIES)
+if(DEFINED SKIA_LIBRARIES AND USE_SKIA)
   include_directories(${SKIA_DIR}/android)
   include_directories(${SKIA_DIR}/atlastext)
   include_directories(${SKIA_DIR}/c)
